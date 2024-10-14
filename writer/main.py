@@ -1,7 +1,7 @@
 import tkinter as tk
-from text_editor import TextEditor
+from dfwriter import DFWriter
 
 if __name__ == "__main__":
     root = tk.Tk()
-    editor = TextEditor(root)
+    editor = DFWriter(root)
     root.mainloop()
