@@ -1,0 +1,25 @@
+PART 1
+
+1. User Writes up some text to write a book, and AI suggests Name, Ganere, Length, complexity etc.
+2. User can then fine tune the book settings of the book
+3. AI then offers some statistics of that genre, and useful data
+4. Ask the user to define AI contribution. 
+5. Ask the user to write an introduction paragraph.
+6. AI analyzes the writing, style, and then gives.
+7. User can pick between Books, chapters, pages to edit/write
+8. User can search the entire book with natural language
+
+PART 2
+As user is writing, user can use AI tools to refine the content
+
+
+PART 3 
+AI analyses the chapter, and gives recommendations
+
+PART 4 
+Plot twist generator
+Engagement enhancer
+Research tool 
+AI fact checker
+
+
