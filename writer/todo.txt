@@ -23,3 +23,6 @@ Research tool
 AI fact checker
 
 
+PART 5 
+Device startup spash screens
+Writing statistics analysis
