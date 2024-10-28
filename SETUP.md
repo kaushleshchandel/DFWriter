@@ -4,49 +4,34 @@
 sudo apt update
 sudo apt upgrade -y
 
-# Install Ghostwriter
-sudo apt install -y ghostwriter
 
-# Install LightDM and LXDE core
-sudo apt install -y lightdm lxde-core
+# Setup GUI
+ 
+sudo apt install xserver-xorg xserver-xorg-core -y
+sudo apt install openbox obconf -y
 
-# Enable graphical target   
-sudo systemctl set-default graphical.target
+sudo apt install python3-tk tint2 nitrogen pcmanfm -y
 
-# Set up autologin
-sudo mkdir -p /etc/systemd/system/getty@tty1.service.d/
-sudo tee /etc/systemd/system/getty@tty1.service.d/autologin.conf > /dev/null <<EOT
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $USER --noclear %I \$TERM
-EOT
+mkdir -p ~/.config/openbox
+cp /etc/xdg/openbox/* ~/.config/openbox/
 
-# Configure LightDM for autologin
-sudo tee /etc/lightdm/lightdm.conf > /dev/null <<EOT
-[Seat:*]
-autologin-user=$USER
-autologin-user-timeout=0
-EOT
 
-# Set up .xsession file for LXDE autostart
-tee /home/$USER/.xsession > /dev/null <<EOT
-exec startlxde
-EOT
-chmod +x /home/$USER/.xsession
-chown $USER:$USER /home/$USER/.xsession
+nano ~/.config/openbox/autostart
 
-# Set up autostart for Ghostwriter
-mkdir -p /home/$USER/.config/autostart
-tee /home/$USER/.config/autostart/ghostwriter.desktop > /dev/null <<EOT
-[Desktop Entry]
-Type=Application
-Name=Ghostwriter
-Exec=ghostwriter
-EOT
-chown -R $USER:$USER /home/$USER/.config
+Add these lines
 
-# Remove this script so it doesn't run on subsequent boots
-sudo rm /boot/firstboot.sh
+```
+# Launch panel
+tint2 &
 
-# Reboot to apply changes
-sudo reboot
+# Set background to black (optional)
+xsetroot -solid black &
+
+# File manager daemon (optional)
+pcmanfm --desktop &
+```
+
+echo "exec openbox-session" > ~/.xinitrc
+
+
+ 
