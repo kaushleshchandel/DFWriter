@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import filedialog, font
 from logic import DistractionFreeEditorLogic
+import sys
+import platform
 
 class DFWriter:
     def __init__(self, master):
@@ -8,10 +10,12 @@ class DFWriter:
         self.master.title("Distraction-Free Typing Tool")
         self.master.configure(bg='#1e1e1e')
         
-        # Remove window decorations and set fullscreen for Raspberry Pi
-        self.master.attributes('-fullscreen', True)  # Full screen mode
-        self.master.attributes('-type', 'dock')  # Removes window decorations
-        self.master.geometry("400x1280")  # Match your screen resolution
+        # Define default window dimensions (landscape)
+        self.window_width = 1280  # Standard landscape width
+        self.window_height = 400  # Standard landscape height
+        
+        # Platform-specific window setup
+        self.setup_window()
         
         # Override window manager close button
         self.master.protocol("WM_DELETE_WINDOW", self.confirm_exit)
@@ -19,7 +23,7 @@ class DFWriter:
         # Bind additional keys for safety
         self.master.bind('<Escape>', self.toggle_fullscreen)
         self.master.bind('<Control-q>', self.confirm_exit)
-        self.is_fullscreen = True
+        self.is_fullscreen = False  # Track fullscreen state
 
         self.font_size = 16
         self.editor_font = font.Font(family="Courier", size=self.font_size)
@@ -37,30 +41,92 @@ class DFWriter:
 
         self.create_layout()
 
+    def setup_window(self):
+        """Configure window attributes based on platform"""
+        system = platform.system().lower()
+        
+        if system == 'linux':
+            # Linux-specific setup
+            try:
+                self.master.attributes('-type', 'dock')
+            except tk.TclError:
+                # Fallback if -type is not supported
+                self.master.attributes('-zoomed', True)
+        elif system == 'windows':
+            # Windows-specific setup
+            self.master.overrideredirect(True)  # Remove window decorations
+        elif system == 'darwin':
+            # macOS-specific setup
+            self.master.attributes('-fullscreen', True)
+        
+        # Set initial window size
+        self.master.geometry(f"{self.window_width}x{self.window_height}")
+        
+        # Center the window
+        self.center_window()
+
+    def center_window(self):
+        """Center the window on the screen"""
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        x = (screen_width - self.window_width) // 2
+        y = (screen_height - self.window_height) // 2
+        self.master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+
     def toggle_fullscreen(self, event=None):
         self.is_fullscreen = not self.is_fullscreen
+        system = platform.system().lower()
+
         if self.is_fullscreen:
-            # Return to fullscreen mode
-            self.master.attributes('-fullscreen', True)
-            self.master.attributes('-type', 'dock')
+            # Enter fullscreen mode
+            if system == 'linux':
+                try:
+                    self.master.attributes('-type', 'dock')
+                except tk.TclError:
+                    self.master.attributes('-zoomed', True)
+            elif system == 'windows':
+                self.master.overrideredirect(True)
+                self.master.state('zoomed')
+            elif system == 'darwin':
+                self.master.attributes('-fullscreen', True)
         else:
-            # Exit fullscreen but maintain a maximized window
-            self.master.attributes('-fullscreen', False)
-            self.master.attributes('-type', 'normal')
-            # Center the window
-            screen_width = self.master.winfo_screenwidth()
-            screen_height = self.master.winfo_screenheight()
-            x = (screen_width - 400) // 2
-            y = (screen_height - 1280) // 2
-            self.master.geometry(f"400x1280+{x}+{y}")
+            # Exit fullscreen mode
+            if system == 'linux':
+                try:
+                    self.master.attributes('-type', 'normal')
+                except tk.TclError:
+                    self.master.attributes('-zoomed', False)
+            elif system == 'windows':
+                self.master.overrideredirect(True)
+                self.master.state('normal')
+            elif system == 'darwin':
+                self.master.attributes('-fullscreen', False)
+            
+            # Return to centered window
+            self.center_window()
 
     def confirm_exit(self, event=None):
         # Create a simple confirmation dialog
         dialog = tk.Toplevel(self.master)
-        dialog.attributes('-type', 'dialog')  # Make sure dialog appears above main window
+        
+        # Platform-specific dialog setup
+        system = platform.system().lower()
+        if system == 'linux':
+            try:
+                dialog.attributes('-type', 'dialog')
+            except tk.TclError:
+                pass
+        elif system == 'windows':
+            dialog.attributes('-toolwindow', True)
+        
         dialog.title("Confirm Exit")
         dialog.geometry("300x100")
         dialog.transient(self.master)
+        
+        # Center the dialog on the main window
+        dialog_x = self.master.winfo_x() + (self.master.winfo_width() - 300) // 2
+        dialog_y = self.master.winfo_y() + (self.master.winfo_height() - 100) // 2
+        dialog.geometry(f"+{dialog_x}+{dialog_y}")
         
         label = tk.Label(dialog, text="Are you sure you want to exit?")
         label.pack(pady=10)
@@ -75,7 +141,6 @@ class DFWriter:
         dialog.grab_set()
         dialog.focus_set()
 
-    # Rest of the class methods remain the same
     def create_layout(self):
         self.main_frame = tk.Frame(self.master, bg='#1e1e1e')
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -88,9 +153,10 @@ class DFWriter:
         self.text_frame = tk.Frame(self.main_frame, bg='#1e1e1e')
         self.text_frame.pack(expand=True, fill=tk.BOTH)
 
+        # Create text widget with generous padding for a comfortable writing experience
         self.text_widget = tk.Text(self.text_frame, wrap=tk.WORD, bg='#1e1e1e', fg='#ffffff', 
                                    insertbackground='white', font=self.editor_font,
-                                   padx=50, pady=10, borderwidth=0, highlightthickness=0)
+                                   padx=100, pady=20, borderwidth=0, highlightthickness=0)
         self.text_widget.pack(expand=True, fill=tk.BOTH)
         self.text_widget.bind('<KeyRelease>', self.logic.update_text_color)
 
@@ -130,8 +196,6 @@ class DFWriter:
                              font=self.info_font, padx=5)
             label.pack(side=tk.LEFT)
 
-        self.update_breadcrumb("My Story", "Chapter 1", 1)
-
     def create_toolbar(self):
         self.toolbar = tk.Frame(self.main_frame, bg='#282c34', height=30)
         self.toolbar.pack(side=tk.BOTTOM, fill=tk.X)
@@ -142,7 +206,7 @@ class DFWriter:
             ("📂 Open", self.logic.open_file),
             ("💾 Save", self.logic.save_file),
             ("⚙ Settings", self.logic.save_file),
-            ("❌ Exit", self.master.quit)
+            ("❌ Exit", self.confirm_exit)
         ]
 
         for text, command in buttons:
@@ -179,4 +243,3 @@ class DFWriter:
 
     def update_custom(self, value, label="Custom"):
         self.custom_var.set(f"{label}: {value}")
- 
