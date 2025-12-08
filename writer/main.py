@@ -19,6 +19,12 @@ class DFWriterApp(tk.Tk):
         self.setup_window_properties()
 
         self.current_frame = None
+        
+        # Bind global keyboard shortcuts at app level
+        self.bind('<Control-s>', lambda e: self.handle_save())
+        self.bind('<Control-o>', lambda e: self.handle_open())
+        self.bind('<Control-b>', lambda e: self.handle_new_book())
+        
         self.show_project_picker()
 
     def setup_window_properties(self):
@@ -38,11 +44,23 @@ class DFWriterApp(tk.Tk):
         self.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
     def switch_frame(self, frame_class, *args, **kwargs):
+        print(f"DEBUG: switch_frame called with {frame_class.__name__}")
         if self.current_frame:
+            print(f"DEBUG: Destroying current frame: {type(self.current_frame).__name__}")
             self.current_frame.destroy()
         
+        print(f"DEBUG: Creating new frame: {frame_class.__name__}")
         self.current_frame = frame_class(self, *args, **kwargs)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
+        print(f"DEBUG: New frame packed")
+        # Force window update to ensure new frame is visible
+        self.update_idletasks()
+        self.update()
+        # Ensure window is visible and on top
+        self.deiconify()
+        self.lift()
+        self.focus_force()
+        print(f"DEBUG: switch_frame completed")
         return self.current_frame
 
     def show_book_wizard(self):
@@ -61,10 +79,34 @@ class DFWriterApp(tk.Tk):
         self.show_editor(new_path)
 
     def show_project_picker(self):
+        print("DEBUG: show_project_picker called")
+        print(f"DEBUG: current_frame before switch: {self.current_frame}")
         self.switch_frame(ProjectPicker, on_project_selected=self.show_editor)
+        print(f"DEBUG: current_frame after switch: {self.current_frame}")
+        # Ensure window is visible and on top
+        self.deiconify()
+        self.lift()
+        self.focus_force()
 
     def show_editor(self, project_path):
         self.switch_frame(DFWriter, project_path=project_path)
+    
+    def handle_save(self):
+        """Handle Ctrl+S shortcut"""
+        if isinstance(self.current_frame, DFWriter):
+            self.current_frame.logic.save_file()
+    
+    def handle_open(self):
+        """Handle Ctrl+O shortcut"""
+        if isinstance(self.current_frame, DFWriter):
+            self.current_frame.logic.open_file()
+    
+    def handle_new_book(self):
+        """Handle Ctrl+B shortcut"""
+        if isinstance(self.current_frame, DFWriter):
+            self.current_frame.logic.start_new_book_wizard()
+        elif isinstance(self.current_frame, ProjectPicker):
+            self.current_frame.start_new_book()
 
 if __name__ == "__main__":
     app = DFWriterApp()

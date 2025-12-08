@@ -13,10 +13,12 @@ class DFWriter(tk.Frame):
         # NOTE: Window setup (geometry, title) is now handled by the main App controller
         # Key bindings should be bound to the parent/root or specific widgets
         
-        # Bind additional keys for safety - assume parent is root for bindings
-        # accessing master/parent for bindings
+        # Bind keyboard shortcuts
         self.master.bind('<Escape>', self.toggle_fullscreen)
-        self.master.bind('<Control-q>', self.confirm_exit)
+        self.master.bind('<Control-q>', self.close_book)
+        self.master.bind('<Control-s>', lambda e: self.logic.save_file())
+        self.master.bind('<Control-o>', lambda e: self.logic.open_file())
+        self.master.bind('<Control-b>', lambda e: self.logic.start_new_book_wizard())
         self.is_fullscreen = False  # Track fullscreen state
 
         self.font_size = 16
@@ -35,6 +37,10 @@ class DFWriter(tk.Frame):
         self.logic = DistractionFreeEditorLogic(self, self.project_path)
 
         self.create_layout()
+        
+        # Load page content after UI is fully created
+        if self.project_path:
+            self.logic.load_current_page()
 
 
     def setup_window(self):
@@ -101,41 +107,40 @@ class DFWriter(tk.Frame):
             # Return to centered window
             self.center_window()
 
-    def confirm_exit(self, event=None):
-        # Create a simple confirmation dialog
-        dialog = tk.Toplevel(self.master)
+    def close_book(self, event=None):
+        """Close the current book and return to book selection"""
+        from wide_dialogs import WideScreenMessageDialog
+        # Store reference to app before dialog (in case self gets destroyed)
+        app = self.master
         
-        # Platform-specific dialog setup
-        system = platform.system().lower()
-        if system == 'linux':
+        print(f"DEBUG: close_book called, app type: {type(app)}, has show_project_picker: {hasattr(app, 'show_project_picker')}")
+        
+        result = WideScreenMessageDialog.askyesno(
+            app,
+            title="Close Book",
+            message="Are you sure you want to close this book?"
+        )
+        
+        print(f"DEBUG: Dialog returned: {result}")
+        
+        # After dialog closes (wait_window completes), switch to project picker
+        if result:
+            print("DEBUG: About to call show_project_picker")
             try:
-                dialog.attributes('-type', 'dialog')
-            except tk.TclError:
-                pass
-        elif system == 'windows':
-            dialog.attributes('-toolwindow', True)
-        
-        dialog.title("Confirm Exit")
-        dialog.geometry("300x100")
-        dialog.transient(self.master)
-        
-        # Center the dialog on the main window
-        dialog_x = self.master.winfo_x() + (self.master.winfo_width() - 300) // 2
-        dialog_y = self.master.winfo_y() + (self.master.winfo_height() - 100) // 2
-        dialog.geometry(f"+{dialog_x}+{dialog_y}")
-        
-        label = tk.Label(dialog, text="Are you sure you want to exit?")
-        label.pack(pady=10)
-        
-        button_frame = tk.Frame(dialog)
-        button_frame.pack(pady=5)
-        
-        tk.Button(button_frame, text="Yes", command=self.master.quit).pack(side=tk.LEFT, padx=10)
-        tk.Button(button_frame, text="No", command=dialog.destroy).pack(side=tk.LEFT, padx=10)
-        
-        # Make dialog modal
-        dialog.grab_set()
-        dialog.focus_set()
+                # Use after to ensure we're back in the main event loop after wait_window
+                def do_switch():
+                    print("DEBUG: Inside do_switch callback")
+                    if hasattr(app, 'show_project_picker'):
+                        print("DEBUG: Calling show_project_picker")
+                        app.show_project_picker()
+                        print("DEBUG: show_project_picker called")
+                    else:
+                        print("ERROR: app does not have show_project_picker method")
+                app.after(50, do_switch)
+            except Exception as e:
+                print(f"ERROR: Exception in close_book: {e}")
+                import traceback
+                traceback.print_exc()
 
     def create_layout(self):
         self.main_frame = tk.Frame(self.master, bg='#1e1e1e')
@@ -198,12 +203,12 @@ class DFWriter(tk.Frame):
         self.toolbar.pack_propagate(False)
 
         buttons = [
-            ("+ New", self.logic.new_file),
-            ("📖 Start Book", self.logic.start_new_book_wizard),
-            ("📂 Open", self.logic.open_file),
-            ("💾 Save", self.logic.save_file),
-            ("⚙ Settings", self.logic.save_file),
-            ("❌ Exit", self.confirm_exit)
+            ("📖 New Book (Ctrl+B)", self.logic.start_new_book_wizard),
+            ("📂 Open Page (Ctrl+O)", self.logic.open_file),
+            ("💾 Save (Ctrl+S)", self.logic.save_file),
+            ("📄 New Page", self.logic.new_page),
+            ("📑 New Chapter", self.logic.new_chapter),
+            ("📕 Close Book (Ctrl+Q)", self.close_book)
         ]
 
         for text, command in buttons:
