@@ -4,23 +4,17 @@ from logic import DistractionFreeEditorLogic
 import sys
 import platform
 
-class DFWriter:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("Distraction-Free Typing Tool")
-        self.master.configure(bg='#1e1e1e')
+class DFWriter(tk.Frame):
+    def __init__(self, parent, project_path=None):
+        super().__init__(parent)
+        self.project_path = project_path
+        self.configure(bg='#1e1e1e')
         
-        # Define default window dimensions (landscape)
-        self.window_width = 1280  # Standard landscape width
-        self.window_height = 400  # Standard landscape height
+        # NOTE: Window setup (geometry, title) is now handled by the main App controller
+        # Key bindings should be bound to the parent/root or specific widgets
         
-        # Platform-specific window setup
-        self.setup_window()
-        
-        # Override window manager close button
-        self.master.protocol("WM_DELETE_WINDOW", self.confirm_exit)
-        
-        # Bind additional keys for safety
+        # Bind additional keys for safety - assume parent is root for bindings
+        # accessing master/parent for bindings
         self.master.bind('<Escape>', self.toggle_fullscreen)
         self.master.bind('<Control-q>', self.confirm_exit)
         self.is_fullscreen = False  # Track fullscreen state
@@ -31,15 +25,17 @@ class DFWriter:
         self.title_font = font.Font(family="Arial", size=10)
         self.info_font = font.Font(family="Arial", size=9)
 
-        self.logic = DistractionFreeEditorLogic(self)
-
-        # Create StringVar instances as class attributes
+        # Create StringVar instances as class attributes BEFORE logic init
         self.breadcrumb_var = tk.StringVar()
         self.pages_var = tk.StringVar(value="Pages: 0")
         self.words_var = tk.StringVar(value="Words: 0")
         self.custom_var = tk.StringVar(value="Custom: 0")
 
+        # Initialize Logic AFTER variables (so update_breadcrumb works) but BEFORE layout (so buttons work)
+        self.logic = DistractionFreeEditorLogic(self, self.project_path)
+
         self.create_layout()
+
 
     def setup_window(self):
         """Configure window attributes based on platform"""
@@ -203,6 +199,7 @@ class DFWriter:
 
         buttons = [
             ("+ New", self.logic.new_file),
+            ("📖 Start Book", self.logic.start_new_book_wizard),
             ("📂 Open", self.logic.open_file),
             ("💾 Save", self.logic.save_file),
             ("⚙ Settings", self.logic.save_file),
